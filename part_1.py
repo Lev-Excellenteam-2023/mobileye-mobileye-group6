@@ -10,7 +10,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 # if you wanna iterate over multiple files and json, the default source folder name is this.
-DEFAULT_BASE_DIR: str = 'INSERT_YOUR_DIR_WITH_PNG_AND_JSON_HERE'
+DEFAULT_BASE_DIR: str = 'single_image'
 
 # The label we wanna look for in the polygons json file
 TFL_LABEL = ['traffic light']
