@@ -2,7 +2,6 @@ from typing import List, Optional, Union, Dict, Tuple
 import json
 import argparse
 from pathlib import Path
-
 import numpy as np
 from scipy import signal as sg
 from scipy.ndimage import maximum_filter
@@ -10,7 +9,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 # if you wanna iterate over multiple files and json, the default source folder name is this.
-DEFAULT_BASE_DIR: str = 'INSERT_YOUR_DIR_WITH_PNG_AND_JSON_HERE'
+DEFAULT_BASE_DIR: str = 'C:/Users/user/PycharmProjects/pythonProject5/mobileye-mobileye-group6/Image_to_run'
 
 # The label we wanna look for in the polygons json file
 TFL_LABEL = ['traffic light']
@@ -120,4 +119,8 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    #img = cv2.imread("C:/Users/user/PycharmProjects/pythonProject5/mobileye-mobileye-group6/images_set/aachen_000010_000019_leftImg8bit.png")
+    # points = get_json_points("C:/Users/user/PycharmProjects/pythonProject5/mobileye-mobileye-group6/images_set/aachen_000010_000019_gtFine_polygons.json")
+    # print(points)
+    # crop_image(points, img)
     main()

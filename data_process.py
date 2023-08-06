@@ -65,12 +65,21 @@ def crop_image(points: List[Tuple[int, int]], img_path: str, output_path: str):
     """
     img = Image.open(img_path)
     min_h, max_h, min_w, max_w = find_min_max_point(points)
-    offset = 2  # Adjust this offset as needed
+    offset = 0  # Adjust this offset as needed
     cropped_img = img.crop((min_w - offset, min_h - offset, max_w + offset, max_h + offset))
     cropped_img.save(output_path)
 
 
-def get_json_points(json_path):
+def get_json_points(json_path: str) -> List[List[Tuple[int, int]]]:
+    """
+    Extracts polygon points from a JSON file containing object information.
+
+    Args:
+        json_path (str): Path to the JSON file.
+
+    Returns:
+        List[List[Tuple[int, int]]]: List of polygons, where each polygon is represented as a list of (x, y) points.
+    """
     lst_points = []
     with open(json_path, 'r') as file:
         json_data = json.load(file)
@@ -82,13 +91,14 @@ def get_json_points(json_path):
 
 def main():
     base_path = "C:/Users/user/PycharmProjects/pythonProject5/mobileye-mobileye-group6/images_set/"
-    img_path = base_path + "aachen_000010_000019_leftImg8bit.png"
-    json_path = base_path + "aachen_000010_000019_gtFine_polygons.json"
+    img_path = base_path + "aachen_000011_000019_leftImg8bit.png"
+    json_path = base_path + "aachen_000011_000019_gtFine_polygons.json"
     lst_points = get_json_points(json_path=json_path)
     for i in range(len(lst_points)):
-        crop_image(lst_points[i], img_path=img_path, output_path=f"out_img{i}.png")
+        crop_image(lst_points[i], img_path=img_path, output_path=f"out_img{i + 13}.png")
 
-    min_h, max_h, min_w, max_w = find_min_max_point(lst_points[3])
+    print(lst_points)
+    min_h, max_h, min_w, max_w = find_min_max_point(lst_points[0])
     put_text(img_path, (min_w + max_w) // 2, (min_h + max_h) // 2, "X")
 
 
