@@ -1,70 +1,67 @@
+import time
+from scipy.ndimage import maximum_filter
 import cv2
 import numpy as np
 from scipy import signal as sg
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 
-def convert_to_green(image_path: str):
-    """
-    Convert an image to green by emphasizing the green channel.
-
-    Args:
-        image_path (str): Path to the input image.
-    """
-    # Load the image
-    image = cv2.imread(image_path)
-
-    # Split the image into color channels
-    blue, green, red = cv2.split(image)
-
-    # Set the blue and red channels to zero, emphasizing the green channel
-    blue = np.zeros_like(blue)
-    red = np.zeros_like(red)
-
-    # Merge the channels back together
-    green_image = cv2.merge((blue, green, red))
-
-    return green_image
-
-
-def do_convolve(image_path, temp_path):
+def identify_red_traffic_lights(image_path, template_path1):
+    # Open the input image
     image = Image.open(image_path)
     draw = ImageDraw.Draw(image)
+
+    # Convert image to numpy array
     input_array = np.array(image)
-    height, width, channels = input_array.shape
-    temp = Image.open(temp_path)
-    resized_temp = temp.resize((3, 3))
-    temp_np = np.array(resized_temp)
-    temp_np = temp_np[:, :, 1]
-    #temp_np = np.array([[96, 114, 148], [161, 165, 157], [127, 89, 66]])
-
-    # Calculate the sum of all elements in the array
+    height, width, _ = input_array.shape
     #
-    # mean = np.mean(temp_np)
-    #
-    # # Normalize the array by subtracting the mean
-    # normalized_array = temp_np - mean
-    sum_of_elements = np.sum(temp_np)
+    template = Image.open(template_path1)
+    resized_temp = template.resize((3, 3))
+    temp_np = np.array(resized_temp) / 255.0
+    temp_np = temp_np[:, :, 0]
+    k_red = temp_np / np.sum(temp_np)
 
-    # Normalize the array by dividing each element by the sum
-    k = temp_np / sum_of_elements
+    # Apply convolution to each channel
+    #k = np.array([[1/9, 1/9, 1/9], [1/9, 1/9, 1/9], [1/9, 1/9, 1/9]])
+    redness_score_r = sg.convolve(input_array[:, :, 0], k_red)
+    redness_score_g = sg.convolve(input_array[:, :, 1], k_red)
+    redness_score_b = sg.convolve(input_array[:, :, 2], k_red)
 
-    redness_score = sg.convolve(input_array[:, :, 1], k)
-    # image = Image.fromarray(redness_score.astype('uint8'))
-    # image.show()
+    threshold_r = 175  # Adjust the threshold as needed
+    threshold_g = 190
+    list_point = []
     for y in range(height):
         for x in range(width):
-            # Check if the redness score is above a threshold to consider it as a red region
-            if redness_score[y, x] > 240:
-                # Draw a black "X" mark at the current pixel
-                draw.line([(x - 5, y - 5), (x + 5, y + 5)], fill="green", width=2)
-                draw.line([(x - 5, y + 5), (x + 5, y - 5)], fill="green", width=2)
+            if redness_score_r[y, x] > threshold_r and redness_score_r[y, x] >\
+                    (redness_score_g[y, x] + redness_score_b[y, x]) * 0.65:
+                for i in range(len(list_point)):
+                    if x - 10 <= list_point[i][0] <= x + 10 and y - 10 <= list_point[i][1] <= y + 10:
+                        if list_point[i][2] < redness_score_r[y, x]:
+                            list_point[i][0] = x
+                            list_point[i][1] = y
+                            list_point[i][2] = redness_score_r[y, x]
+                            break
+                        else:
+                            break
+                else:
+                    list_point.append([x, y, redness_score_r[y, x]])
+                #draw.rectangle([(x - 2, y - 2), (x + 2, y + 2)], outline="red")
+            elif redness_score_g[y, x] > threshold_g and redness_score_g[y, x] > \
+                    (redness_score_r[y, x] + redness_score_b[y, x]) * 0.5:
+                None
+                #print(f"g: {redness_score_g[y, x]} r: {redness_score_r[y, x]} b: {redness_score_b[y, x]}")
+                #draw.rectangle([(x - 2, y - 2), (x + 2, y + 2)], outline="green")
+
+    for [x, y, _] in list_point:
+        draw.rectangle([(x - 2, y - 2), (x + 2, y + 2)], outline="red")
+    print(len(list_point))
     return image
 
 
 if __name__ == "__main__":
     base_path = "C:/Users/user/PycharmProjects/pythonProject5/mobileye-mobileye-group6/images_set/"
-    img_path = base_path + "aachen_000011_000019_leftImg8bit.png"
-    temp_img = "out_img23.png"
-    result = do_convolve(img_path, temp_img)
+    img_path = base_path + "aachen_000002_000019_leftImg8bit.png"
+    temp_red = "red_light2.png"
+    temp_green= "green_light1.png"
+    result = identify_red_traffic_lights("red_to_check2.jpeg", temp_red)
     result.show()
