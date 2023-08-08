@@ -6,6 +6,7 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Sequence, Optional, List, Any, Dict
 
+import PIL.ImageShow
 from matplotlib.axes import Axes
 
 # Internal imports... Should not fail
@@ -38,78 +39,83 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
     # Get the image dimensions and the number of channels (3 for RGB)
     height, width, channels = c_image.shape
 
-    # template = Image.open("red_light3.png")
-    # resized_temp = template.resize((3, 3))
-    # temp_np = np.array(resized_temp) / 255.0
-    # temp_np = temp_np[:, :, 0]
-    # k_red = temp_np / np.sum(temp_np)
-    # Define the convolution kernel to detect red regions
+
     kernel = np.array([[1/9, 1/9, 1/9], [1/9, 1/9, 1/9], [1/9, 1/9, 1/9]])
-    #kernel = np.array([[1 / 16, 2 / 16, 1 / 16], [2 / 16, 4 / 16, 2 / 16], [1 / 16, 2 / 16, 1 / 16]])
-    # Apply the convolution operation to get a redness score for each pixel
+
+    redness_score_red = c_image[:, :, 0]
+    redness_score_blue = c_image[:, :, 2]
     redness_score_green = convolve(c_image[:, :, 1], kernel)
-    redness_score_red = convolve(c_image[:, :, 0], kernel)
-    redness_score_blue = convolve(c_image[:, :, 2], kernel)
+
+    # image = Image.fromarray(redness_score_red * 255)
+    # #PIL.ImageShow.show(image, title="red")
+    # image.show(title="red")
+    #
+    # image = Image.fromarray(redness_score_blue * 255)
+    # image.show(title="blue")
+    #
+    # image = Image.fromarray(redness_score_green * 255)
+    # image.show(title="green")
+
     #empty lists to store the x and y coordinates of the red and green regions
     x_red: List[float] = []
     y_red: List[float] = []
     x_green: List[float] = []
     y_green: List[float] = []
     threshold_red = np.float32(253/255)
-    threshold_green = np.float32(220/255)
+    threshold_green = np.float32(250/255)
 
-    list_point =[]
-    #max_rsr = maximum_filter(redness_score_red, 150, mode='constant')
-    #max_rsg = maximum_filter(redness_score_green, 150, mode='constant')
+
+    #max_rsr = maximum_filter(redness_score_red, 50, mode='constant')
+    #max_rsg = maximum_filter(redness_score_green, 50, mode='constant')
+
     # Loop through each pixel and mark the red regions with an "X" mark
-    for y in range(height):
+    for y in range((height * 2) // 5):
         for x in range(width):
             # Check if the redness score is above a threshold to consider it as a red region
             rsg = redness_score_green[y, x]
             rsr = redness_score_red[y, x]
             rsb = redness_score_blue[y, x]
-            if rsg > (rsb + rsr) * 0.67 and rsg > threshold_green:
-                # x_green.append(x)
-                # y_green.append(y)
-                for i in range(len(list_point)):
-                    if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
-                        if list_point[i][2] < rsg:
-                            list_point[i][0] = x
-                            list_point[i][1] = y
-                            list_point[i][2] = rsg
-                            break
-                        else:
-                            break
-                else:
-                    list_point.append([x, y, rsg, 'g'])
-            elif rsr > (rsb + rsg) * 0.65 and rsr > threshold_red:
-                # x_red.append(x)
-                # y_red.append(y)
-                for i in range(len(list_point)):
-                    if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
-                        if list_point[i][2] < rsr:
-                            list_point[i][0] = x
-                            list_point[i][1] = y
-                            list_point[i][2] = rsr
-                            break
-                        else:
-                            break
-                else:
-                    list_point.append([x, y, rsr, 'r'])
+            if rsg > (rsr + rsr) * 0.95 and rsg > threshold_green:
+                #rsg == max_rsg[y, x] and
+                x_green.append(x)
+                y_green.append(y)
+                # for i in range(len(list_point)):
+                #     if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
+                #         if list_point[i][2] < rsg:
+                #             list_point[i][0] = x
+                #             list_point[i][1] = y
+                #             list_point[i][2] = rsg
+                #             break
+                #         else:
+                #             break
+                # else:
+                #     list_point.append([x, y, rsg, 'g'])
+            elif rsr > (rsb + rsg) * 0.8 and rsr > threshold_red:
+                #rsr == max_rsr[y, x] and
+                 x_red.append(x)
+                 y_red.append(y)
+                # for i in range(len(list_point)):
+                #     if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
+                #         if list_point[i][2] < rsr:
+                #             list_point[i][0] = x
+                #             list_point[i][1] = y
+                #             list_point[i][2] = rsr
+                #             break
+                #         else:
+                #             break
+                # else:
+                #     list_point.append([x, y, rsr, 'r'])
 
     # Okay... Here's an example of what this function should return. You will write your own of course
-   # x_red: List[float] = (np.arange(-100, 100, 20) + c_image.shape[1] / 2).tolist()
-   # y_red: List[float] = [c_image.shape[0] / 2 - 120] * len(x_red)
-   # x_green: List[float] = x_red
-   # y_green: List[float] = [c_image.shape[0] / 2 - 100] * len(x_red)
 
-    for [x, y, _, ch] in list_point:
-        if ch == 'g':
-            x_green.append(x)
-            y_green.append(y)
-        else:
-            x_red.append(x)
-            y_red.append(y)
+
+    # for [x, y, _, ch] in list_point:
+    #     if ch == 'g':
+    #         x_green.append(x)
+    #         y_green.append(y)
+    #     else:
+    #         x_red.append(x)
+    #         y_red.append(y)
     print("green : " + str(len(x_green)) + " red : " + str(len(x_red)))
     if kwargs.get('debug', False):
         # This is here just so you know you can do it... Look at parse_arguments() for details
