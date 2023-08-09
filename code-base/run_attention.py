@@ -5,6 +5,7 @@ from datetime import datetime
 from argparse import Namespace
 from pathlib import Path
 from typing import Sequence, Optional, List, Any, Dict
+import cv2
 
 import PIL.ImageShow
 from matplotlib.axes import Axes
@@ -28,6 +29,25 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
+def find_circles(img, y_points, x_points, color_output):
+    bw_image = np.zeros_like(img[:, :, 0], dtype=np.uint8)
+    for (y, x) in zip(y_points, x_points):
+        bw_image[y, x] = 255
+
+    # cv2.imshow("bw", bw_image)
+    # cv2.waitKey(0)
+
+    r_circles = cv2.HoughCircles(bw_image, cv2.HOUGH_GRADIENT, 1, 80,
+                                 param1=1, param2=1, minRadius=0, maxRadius=12)
+    if r_circles is not None:
+        # convert the (x, y) coordinates and radius of the circles to integers
+        circles = np.round(r_circles[0, :]).astype("int")
+        # loop over the (x, y) coordinates and radius of the circles
+        for (x, y, r) in circles:
+            cv2.circle(img, (x, y), r, color_output, 4)
+            print(f"x: {x}, y: {y}, r: {r}")
+
+    return img
 def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
     """
     Detect candidates for TFL lights. Use c_image, kwargs and you imagination to implement.
@@ -61,12 +81,13 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
     y_red: List[float] = []
     x_green: List[float] = []
     y_green: List[float] = []
+
+
     threshold_red = np.float32(253/255)
-    threshold_green = np.float32(250/255)
+    threshold_green = np.float32(230/255)
 
-
-    #max_rsr = maximum_filter(redness_score_red, 50, mode='constant')
-    #max_rsg = maximum_filter(redness_score_green, 50, mode='constant')
+    # max_rsr = maximum_filter(redness_score_red, 150, mode='constant')
+    # max_rsg = maximum_filter(redness_score_green, 150, mode='constant')
 
     # Loop through each pixel and mark the red regions with an "X" mark
     for y in range((height * 2) // 5):
@@ -76,6 +97,7 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
             rsr = redness_score_red[y, x]
             rsb = redness_score_blue[y, x]
             if rsg > (rsr + rsr) * 0.95 and rsg > threshold_green:
+               # avg = max_rsg[y - 25, x + 25]
                 #rsg == max_rsg[y, x] and
                 x_green.append(x)
                 y_green.append(y)
@@ -92,9 +114,22 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
                 #     list_point.append([x, y, rsg, 'g'])
             elif rsr > (rsb + rsg) * 0.8 and rsr > threshold_red:
                 #rsr == max_rsr[y, x] and
-                 x_red.append(x)
-                 y_red.append(y)
-                # for i in range(len(list_point)):
+                x_red.append(x)
+                y_red.append(y)
+
+                 # x_red.append(x-1)
+                 # y_red.append(y)
+                 #
+                 # x_red.append(x+1)
+                 # y_red.append(y)
+                 #
+                 # y_red.append(y+1)
+                 # x_red.append(x)
+                 #
+                 # y_red.append(y-1)
+                 # x_red.append(x)
+
+            # for i in range(len(list_point)):
                 #     if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
                 #         if list_point[i][2] < rsr:
                 #             list_point[i][0] = x
@@ -116,6 +151,14 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
     #     else:
     #         x_red.append(x)
     #         y_red.append(y)
+    img = cv2.cvtColor(c_image, cv2.COLOR_RGB2BGR)
+
+    img = find_circles(img, y_red, x_red, (204, 0, 0))
+    img = find_circles(img, y_green, x_green, (51, 0, 102))
+
+    cv2.imshow("hh", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     print("green : " + str(len(x_green)) + " red : " + str(len(x_red)))
     if kwargs.get('debug', False):
         # This is here just so you know you can do it... Look at parse_arguments() for details
