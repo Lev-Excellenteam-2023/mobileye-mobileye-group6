@@ -48,6 +48,8 @@ def find_circles(img, y_points, x_points, color_output):
             print(f"x: {x}, y: {y}, r: {r}")
 
     return img
+
+
 def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
     """
     Detect candidates for TFL lights. Use c_image, kwargs and you imagination to implement.
@@ -59,34 +61,21 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
     # Get the image dimensions and the number of channels (3 for RGB)
     height, width, channels = c_image.shape
 
-
-    kernel = np.array([[1/9, 1/9, 1/9], [1/9, 1/9, 1/9], [1/9, 1/9, 1/9]])
+    kernel = np.array([[1 / 9, 1 / 9, 1 / 9], [1 / 9, 1 / 9, 1 / 9], [1 / 9, 1 / 9, 1 / 9]])
 
     redness_score_red = c_image[:, :, 0]
     redness_score_blue = c_image[:, :, 2]
     redness_score_green = convolve(c_image[:, :, 1], kernel)
 
-    # image = Image.fromarray(redness_score_red * 255)
-    # #PIL.ImageShow.show(image, title="red")
-    # image.show(title="red")
-    #
-    # image = Image.fromarray(redness_score_blue * 255)
-    # image.show(title="blue")
-    #
-    # image = Image.fromarray(redness_score_green * 255)
-    # image.show(title="green")
-
-    #empty lists to store the x and y coordinates of the red and green regions
     x_red: List[float] = []
     y_red: List[float] = []
     x_green: List[float] = []
     y_green: List[float] = []
 
+    threshold_red = np.float32(250 / 255)
+    threshold_green = np.float32(245 / 255)
 
-    threshold_red = np.float32(253/255)
-    threshold_green = np.float32(230/255)
-
-    # max_rsr = maximum_filter(redness_score_red, 150, mode='constant')
+    # max_rsr = maximum_filter(redness_score_red, 10, mode='constant')
     # max_rsg = maximum_filter(redness_score_green, 150, mode='constant')
 
     # Loop through each pixel and mark the red regions with an "X" mark
@@ -96,66 +85,21 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
             rsg = redness_score_green[y, x]
             rsr = redness_score_red[y, x]
             rsb = redness_score_blue[y, x]
-            if rsg > (rsr + rsr) * 0.95 and rsg > threshold_green:
-               # avg = max_rsg[y - 25, x + 25]
-                #rsg == max_rsg[y, x] and
+
+            if rsg > (rsr + rsr) * 0.9 and rsg > threshold_green:
                 x_green.append(x)
                 y_green.append(y)
-                # for i in range(len(list_point)):
-                #     if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
-                #         if list_point[i][2] < rsg:
-                #             list_point[i][0] = x
-                #             list_point[i][1] = y
-                #             list_point[i][2] = rsg
-                #             break
-                #         else:
-                #             break
-                # else:
-                #     list_point.append([x, y, rsg, 'g'])
+
             elif rsr > (rsb + rsg) * 0.8 and rsr > threshold_red:
-                #rsr == max_rsr[y, x] and
                 x_red.append(x)
                 y_red.append(y)
 
-                 # x_red.append(x-1)
-                 # y_red.append(y)
-                 #
-                 # x_red.append(x+1)
-                 # y_red.append(y)
-                 #
-                 # y_red.append(y+1)
-                 # x_red.append(x)
-                 #
-                 # y_red.append(y-1)
-                 # x_red.append(x)
-
-            # for i in range(len(list_point)):
-                #     if x - 15 <= list_point[i][0] <= x + 15 and y - 15 <= list_point[i][1] <= y + 15:
-                #         if list_point[i][2] < rsr:
-                #             list_point[i][0] = x
-                #             list_point[i][1] = y
-                #             list_point[i][2] = rsr
-                #             break
-                #         else:
-                #             break
-                # else:
-                #     list_point.append([x, y, rsr, 'r'])
-
-    # Okay... Here's an example of what this function should return. You will write your own of course
-
-
-    # for [x, y, _, ch] in list_point:
-    #     if ch == 'g':
-    #         x_green.append(x)
-    #         y_green.append(y)
-    #     else:
-    #         x_red.append(x)
-    #         y_red.append(y)
     img = cv2.cvtColor(c_image, cv2.COLOR_RGB2BGR)
 
     img = find_circles(img, y_red, x_red, (204, 0, 0))
     img = find_circles(img, y_green, x_green, (51, 0, 102))
 
+    # img = cv2.copyMakeBorder(img,50,50,50,1000, cv2.BORDER_CONSTANT, value=[0,0,0])
     cv2.imshow("hh", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -165,8 +109,8 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs) -> Dict[str, Any]:
         if np.random.rand() > kwargs.get('some_threshold', 0) / 45:
             print("You're lucky, aren't you???")
         return {X: x_red + x_green,
-                 Y: y_red + y_green,
-                 COLOR: [RED] * len(x_red) + [GRN] * len(x_green),
+                Y: y_red + y_green,
+                COLOR: [RED] * len(x_red) + [GRN] * len(x_green),
                 }
 
 
@@ -239,6 +183,7 @@ def prepare_list(in_csv_file: Path, args: Namespace) -> DataFrame:
                                               max_count=args.count,
                                               take_specific=args.image)
     return pd.concat([pd.DataFrame(columns=CSV_INPUT), csv_list], ignore_index=True)
+
 
 def run_on_list(meta_table: pd.DataFrame, func: callable, args: Namespace) -> pd.DataFrame:
     """
